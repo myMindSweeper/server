@@ -1,0 +1,14 @@
+version: '2'
+services:
+  api:
+    build: .
+    ports:
+      - "5000:5000"
+  db:
+    image: postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: mindsweeper
+    ports:
+      - "5433:5432"
