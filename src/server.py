@@ -39,7 +39,6 @@ def upload_fb():
     body = request.get_json()
     token = body.get('token')
     files = body.get('files')
-    thread_id = body.get('thread_id')
     i = 0
     try:
         idinfo = id_token.verify_oauth2_token(token, requests.Request(), environ.get("GOOGLE_CLIENT_ID"))
@@ -49,8 +48,9 @@ def upload_fb():
         user = session.query(User).filter(User.id==userid).one()
         for text in files:
             try:
-                new_thread = MessageThread(id=thread_id, user_id=user.id, person=str(i))
+                new_thread = MessageThread(id=i, user_id=user.id, person=str(i))
                 session.add(new_thread)
+                i += 1
                 try:
                     session.commit()
                 except:
@@ -63,7 +63,6 @@ def upload_fb():
                     session.add(msg)
             except:
                 pass
-            i += 1
         try:
             session.commit()
         except:
