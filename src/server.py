@@ -67,6 +67,8 @@ def upload_fb():
             session.commit()
         except:
             session.rollback()
+            return 'Error', 400
+        return 'Done'
     except Exception as e:
         session.rollback()
         return str(e) + 'threadid:' + str(sms_thread_id)
