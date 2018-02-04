@@ -4,3 +4,4 @@ psycopg2
 python-dotenv
 SQLAlchemy
 google-api-core
+beautifulsoup4

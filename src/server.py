@@ -13,6 +13,7 @@ from datetime import datetime
 
 from db import session
 from db.models import User, MessageThread, Message
+from utils.messenger_scraper import scrapePage
 
 app = Flask(__name__)
 CORS(app)
@@ -32,6 +33,44 @@ def create_account():
         return 'Succesful'
     except Exception as e:
         return str(e), 400
+
+@app.route('/upload-fb', methods=['POST'])
+def upload_fb():
+    body = request.get_json()
+    token = body.get('token')
+    files = body.get('files')
+    thread_id = body.get('thread_id')
+    i = 0
+    try:
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), environ.get("GOOGLE_CLIENT_ID"))
+        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+            raise ValueError('Wrong issuer')
+        userid = idinfo['sub']
+        user = session.query(User).filter(User.id==userid).one()
+        for text in files:
+            try:
+                new_thread = MessageThread(id=thread_id, user_id=user.id, person=str(i))
+                session.add(new_thread)
+                try:
+                    session.commit()
+                except:
+                    session.rollback()
+                p, msgs = scrapePage(str(i), text.replace(' EDT', '').replace(' EST', ''))
+                for m in msgs:
+                    date = datetime.fromtimestamp(m)
+                    msg = Message(thread_id=new_thread.id, type='FB', body=m['body'],
+                        date=date, user_speaking=m['user_speaking'])
+                    session.add(msg)
+            except:
+                pass
+            i += 1
+        try:
+            session.commit()
+        except:
+            session.rollback()
+    except Exception as e:
+        session.rollback()
+        return str(e) + 'threadid:' + str(sms_thread_id)
 
 @app.route('/upload-sms', methods=['POST'])
 def upload_sms():
