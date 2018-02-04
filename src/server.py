@@ -10,6 +10,7 @@ from flask_cors import CORS
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from datetime import datetime
+import json
 
 from db import session
 from db.models import User, MessageThread, Message
@@ -45,7 +46,13 @@ def upload_fb():
         if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
             raise ValueError('Wrong issuer')
         userid = idinfo['sub']
-        user = session.query(User).filter(User.id==userid).one()
+        try:
+            user = session.query(User).filter(User.id==userid).one()
+        except:
+            user = User(id=userid)
+            session.add(user)
+            session.commit()
+
         for text in files:
             try:
                 new_thread = MessageThread(id=i, user_id=user.id, person=str(i))
@@ -57,21 +64,21 @@ def upload_fb():
                     session.rollback()
                 p, msgs = scrapePage(str(i), text.replace(' EDT', '').replace(' EST', ''))
                 for m in msgs:
-                    date = datetime.fromtimestamp(m)
+                    date = datetime.fromtimestamp(m['date'])
                     msg = Message(thread_id=new_thread.id, type='FB', body=m['body'],
                         date=date, user_speaking=m['user_speaking'])
                     session.add(msg)
-            except:
-                pass
+            except Exception as e:
+                return str(e)
         try:
             session.commit()
         except:
             session.rollback()
-            return 'Error', 400
-        return 'Done'
+            return 'Error', 401
+        return json.dumps({'msg': 'Success'}), 200
     except Exception as e:
         session.rollback()
-        return str(e) + 'threadid:' + str(sms_thread_id)
+        return str(e)
 
 @app.route('/upload-sms', methods=['POST'])
 def upload_sms():
